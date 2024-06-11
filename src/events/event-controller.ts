@@ -35,15 +35,6 @@ class EventController {
         }
     };
 
-    getEvents = async (req: Request, res: Response) => {
-        try {
-            const events = await this.eventService.getEvents();
-            res.status(200).json(events);
-        } catch (error: any) {
-            res.status(500).json({ error: error.message });
-        }
-    };
-
     
     
     getEventById = async (req: Request, res: Response) => {
@@ -60,7 +51,7 @@ class EventController {
         }
     };
 
-     getEventsBy = async (req: Request, res: Response): Promise<void> => {
+     getEvents = async (req: Request, res: Response): Promise<void> => {
     try {
         const user: UserCityDto = (req as any).user;
 
