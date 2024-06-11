@@ -9,8 +9,8 @@ import RefreshTokenModel from './models/RefreshToken';
 dotenv.config();
 
 class AuthService {
-  private readonly jwtSecret = process.env.JWT_SECRET || '';
-  private readonly jwtRefreshSecret = process.env.JWT_SECRET_SECRET || '';
+  private readonly jwtSecret = process.env.JWT_SECRET || 'my_secret_key';
+  private readonly jwtRefreshSecret = process.env.JWT_SECRET_SECRET || 'my_refresh_secret_key';
 
   async registerUser(createUserDto: CreateUserDto): Promise<IUser> {
     const { email, password, username } = createUserDto;
