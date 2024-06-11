@@ -26,14 +26,13 @@ class AuthService {
     return newUser;
   }
 
-  async loginUser(email: string, password: string): Promise<{ user?: IUser, accessToken?: string, refreshToken?: string, error?: string, password1?:string,password2?:string } | null> {
+  async loginUser(email: string, password: string): Promise<{ user?: IUser, accessToken?: string, refreshToken?: string, error?: string } | null> {
     try {
         const user = await UserModel.findOne({ email });
         if (!user) return {error:'User with this email does not exist'}
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
-        const hashedPassword = await bcrypt.hash(password, 10);
-        if (!isPasswordValid) return {error:'PASSWORD', password1: hashedPassword, password2: user.password};
+        if (!isPasswordValid) return {error:'PASSWORD'};
 
         const accessToken = this.generateJwt(user);
         const refreshToken = this.generateRefreshToken(user);
