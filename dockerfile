@@ -6,13 +6,13 @@ WORKDIR /app
 COPY package*.json ./
 
 
-RUN npm install
+RUN yarn install
 
 
 COPY . .
 
 
-RUN npm run build
+RUN yarn build
 
 
 FROM node:18-slim
@@ -25,7 +25,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/package*.json ./
 
 
-RUN npm install --only=production
+RUN yarn install --only=production
 
 
 EXPOSE 3000
