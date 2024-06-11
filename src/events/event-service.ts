@@ -1,57 +1,42 @@
 import { CreateEventDto } from './dtos/CreateEvent.dot';
-import { Event } from './types/response';
+import { EventModel, EventDocument } from './models/EventModel';
+import db from '../db';  
 
-
-
-// this event service instance shows how to create a event, get a event by id, and get all events with in-memory data
 class EventService {
-    eventsInDatabase: Event[] = [
-    {
-        id: 1,
-        name:"Art Fair",
-        description: "Explore the latest works from local and international artists",
-        date: new Date(),
-        location:"Almaty, KBTU",
-        duration:"10:00 AM - 6:00PM"
-    },
-    {
-        id: 2,
-        name:"Backend Lecture",
-        description: "",
-        date: new Date("2024-06-11"),
-        location:"Almaty, Satbayev University",
-        duration:"9:15 AM - 11:15AM"
-    },
-      {
-        id: 3,
-        name:"Demo Day",
-        description:"",
-        date: new Date("2024-08-09"),
-        location:"Almaty, Satbayev University",
-        duration:"9:00 AM - 12:00 PM"
-      },
-    ];
-  
-    getEventById(id: number): Event | null {
-      return this.eventsInDatabase.find((user) => user.id === id) || null;
+    constructor() {
+        db().then(() => console.log('Database connected')).catch((err) => console.error('Database connection error:', err));
     }
-    getEvents(): Event[] {
-      return this.eventsInDatabase;
+
+    async getEventById(id: string): Promise<EventDocument | null> {
+        return await EventModel.findById(id).exec();
     }
-  
-    createEvent(userDto: CreateEventDto): Event {
-        const newEvent: Event = {
-            id: 4,
-            name: userDto.name,
-            description: userDto.description,
-            date: new Date(userDto.date),
-            location: userDto.location,
-            duration: userDto.duration,
-    };
-        this.eventsInDatabase.push(newEvent);
-        return newEvent;
+
+    async getEvents(): Promise<EventDocument[]> {
+        return await EventModel.find().exec();
     }
+
+    async createEvent(eventDto: CreateEventDto): Promise<EventDocument> {
+        const newEvent = new EventModel({
+            name: eventDto.name,
+            description: eventDto.description,
+            date: eventDto.date,
+            location: eventDto.location,
+            duration: eventDto.duration,
+        });
+        return await newEvent.save();
+    }
+   
+    async getEventsByCity(city: string, page: number, limit: number, sortBy: string, sortDirection: number): Promise<EventDocument[]> {
+      try {
+          const skip = (page - 1) * limit;
+          const sorting = {}
+          sorting[sortBy] = sortDirection;
+          return await EventModel.find({ location: city }).skip(skip).limit(limit).sort(sorting).exec();
+      } catch (error) {
+          console.error('Error getting events by city:', error);
+          throw new Error('Failed to get events by city');
+      }
   }
-  
-  export default EventService;
-  
+}
+
+export default EventService;

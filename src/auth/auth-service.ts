@@ -9,8 +9,8 @@ import RefreshTokenModel from './models/RefreshToken';
 dotenv.config();
 
 class AuthService {
-  private readonly jwtSecret = process.env.JWT_SECRET!;
-  private readonly jwtRefreshSecret = process.env.JWT_REFRESH_SECRET!;
+  private readonly jwtSecret = 'd38fb74107310c7c6e495114b1b003ec6dfffae93a18614994ff5a8344b4ffa1';
+  private readonly jwtRefreshSecret = 'c874e5219172b2904abca79191212627ad7ba55871ecf500dc1fc21f5c7d16bc';
 
   async registerUser(createUserDto: CreateUserDto): Promise<IUser> {
     const { email, password, username } = createUserDto;
@@ -26,28 +26,34 @@ class AuthService {
     return newUser;
   }
 
-  async loginUser(email: string, password: string): Promise<{ user: IUser, accessToken: string, refreshToken: string } | null> {
-    const user = await UserModel.findOne({ email });
-    if (!user) return null;
+  async loginUser(email: string, password: string): Promise<{ user?: IUser, accessToken?: string, refreshToken?: string, error?: string, password1?:string,password2?:string } | null> {
+    try {
+        const user = await UserModel.findOne({ email });
+        if (!user) return {error:'User with this email does not exist'}
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) return null;
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const hashedPassword = await bcrypt.hash(password, 10);
+        if (!isPasswordValid) return {error:'PASSWORD', password1: hashedPassword, password2: user.password};
 
-    const accessToken = this.generateJwt(user);
-    const refreshToken = this.generateRefreshToken(user);
+        const accessToken = this.generateJwt(user);
+        const refreshToken = this.generateRefreshToken(user);
 
-    const refreshTokenDoc = new RefreshTokenModel({ token: refreshToken, user: user._id });
-    await refreshTokenDoc.save();
+        const refreshTokenDoc = new RefreshTokenModel({ token: refreshToken, user: user._id });
+        await refreshTokenDoc.save();
 
-    return { user, accessToken, refreshToken };
-  }
+        return { user, accessToken, refreshToken };
+    } catch (error) {
+        console.error('Error in loginUser:', error);
+        return null;
+    }
+}
 
   private generateJwt(user: IUser): string {
-    return jwt.sign({ id: user._id, email: user.email }, this.jwtSecret, { expiresIn: '15m' });
+    return jwt.sign({ id: user._id, email: user.email, city:user.city }, this.jwtSecret, { expiresIn: '15m' });
   }
 
   private generateRefreshToken(user: IUser): string {
-    return jwt.sign({ id: user._id, email: user.email }, this.jwtRefreshSecret, { expiresIn: '7d' });
+    return jwt.sign({ id: user._id, email: user.email, city:user.city }, this.jwtRefreshSecret, { expiresIn: '7d' });
   }
 
   verifyJwt(token: string): any {

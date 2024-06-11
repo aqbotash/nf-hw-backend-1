@@ -1,49 +1,94 @@
 import { Request, Response } from 'express';
-import { CreateEventDto } from './dtos/CreateEvent.dot';
+import { CreateEventDto } from './dtos/CreateEvent.dot'; // Adjusted import path
 import EventService from './event-service';
-
+import { EventDocument } from './models/EventModel';
+import { CreateOptions } from 'mongoose';
+import { CreateUserDto } from '../auth/dtos/CreateUser.dto';
+import { UserCityDto } from '../auth/dtos/UserCity.dto';
 
 class EventController {
-    private eventService : EventService;
+    private readonly jwtSecret = 'd38fb74107310c7c6e495114b1b003ec6dfffae93a18614994ff5a8344b4ffa1';
+    private readonly jwtRefreshSecret = 'c874e5219172b2904abca79191212627ad7ba55871ecf500dc1fc21f5c7d16bc';
+  
+    private eventService: EventService;
 
-
-    constructor(eventService : EventService){
+    constructor(eventService: EventService) {
         this.eventService = eventService;
     }
 
-    createEvent = (req:Request,res:Response) =>{
-        try{
-            const event: CreateEventDto =req.body;
-            const newEvent = this.eventService.createEvent(event);
+    createEvent = async (req: Request, res: Response) => {
+        try {
+            const event: CreateEventDto  = req.body as {
+                name: string;
+                description: string,city: string, date: string,  page?: number, limit?: number, 
+                location: string;
+                duration: string;
+            };
+            if (!event.name || !event.description || !event.date || !event.location || !event.duration) {
+                res.status(400).json({ message: "Send all required fields: name, description, date, location, duration" });
+                return;
+            }
+            const newEvent = await this.eventService.createEvent(event);
             res.status(201).json(newEvent);
-        }catch(error:any){
+        } catch (error: any) {
             res.status(500).json({ error: error.message });
         }
-    }
+    };
 
-    getEvents  = (req:Request, res:Response) =>{
-        try{
-            const events = this.eventService.getEvents();
+    getEvents = async (req: Request, res: Response) => {
+        try {
+            const events = await this.eventService.getEvents();
             res.status(200).json(events);
-        }catch (error: any) {
+        } catch (error: any) {
             res.status(500).json({ error: error.message });
-          }
-    }
+        }
+    };
 
-    getEventById = (req:Request, res:Response) =>{
-        try{
-            const params = req.params;
-            const id = parseInt(params.id);
-            const event = this.eventService.getEventById(id);
-            if(!event){
-                res.status(404).json({error:"Event not found"});
-            }else{
+    
+    
+    getEventById = async (req: Request, res: Response) => {
+        try {
+            const id = req.params.id;
+            const event = await this.eventService.getEventById(id);
+            if (!event) {
+                res.status(404).json({ error: "Event not found" });
+            } else {
                 res.status(200).json(event);
             }
-        }catch (error: any) {
+        } catch (error: any) {
             res.status(500).json({ error: error.message });
         }
+    };
+
+     getEventsBy = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user: UserCityDto = (req as any).user;
+
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        const city = user.city;
+
+        if (!city) {
+            res.status(400).json({ error: 'User city not found' });
+            return;
+        }
+
+        // Pagination parameters
+        const page = parseInt(req.query.page as string) || 1; // Default to page 1
+        const limit = parseInt(req.query.limit as string) || 10; // Default to limit 10
+        const sortBy = req.query.sortBy as string || 'date'; // Default to sort by date
+        const sortDirection = req.query.sortDirection === 'desc' ? -1 : 1; // Default to ascending
+        const events: EventDocument[] = await this.eventService.getEventsByCity(city, page, limit, sortBy, sortDirection);
+
+        res.status(200).json(events);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
     }
-}
+};
+
+};
 
 export default EventController;
