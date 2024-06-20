@@ -1,24 +1,49 @@
-import 'dotenv/config';
+// server.ts
 import express from 'express';
-import connectDB from './db';
-import globalRouter from './global-router';
-import { logger } from './logger';
+import axios from 'axios';
+import bodyParser from 'body-parser';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = 3001;
 
-connectDB();
+app.use(bodyParser.json());
 
-app.use(logger);
-app.use(express.json());
-app.use('/api/v1/',globalRouter);
+const clientId = process.env.BITBUCKET_CLIENT_ID;
+const clientSecret = process.env.BITBUCKET_CLIENT_SECRET;
+const redirectUri = process.env.BITBUCKET_REDIRECT_URI;
 
-
-app.get('/', (req, res) => {
-  res.send('Hello World');
-})
-
-app.listen(PORT, () => {
-  console.log(`Server runs at http://localhost:${PORT}`);
+app.get('/auth', (req, res) => {
+  const state = 'some_random_state'; // Add your state logic here
+  const authUrl = `https://bitbucket.org/site/oauth2/authorize?client_id=${clientId}&response_type=code&state=${state}&redirect_uri=${redirectUri}`;
+  res.redirect(authUrl);
 });
 
+app.post('/auth/callback', async (req, res) => {
+  const { code } = req.body;
+  try {
+    const params = new URLSearchParams();
+    params.append('code', code);
+    params.append('client_id', clientId!);
+    params.append('client_secret', clientSecret!);
+    params.append('redirect_uri', redirectUri!);
+    params.append('grant_type', 'authorization_code');
+
+    const response = await axios.post('https://bitbucket.org/site/oauth2/access_token', params.toString(), {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+
+    const { access_token } = response.data;
+    res.json({ access_token });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to exchange token' });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+});
